@@ -5,7 +5,7 @@ FastAPI Router for Trip Planning, Real-time Streaming, and Revisions.
 import logging
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.config import get_settings
 from app.schemas.trip import TripRequest
@@ -23,6 +23,14 @@ class RevisionRequest(BaseModel):
     """Payload for conversational itinerary revisions."""
     current_itinerary: Itinerary
     instruction: str = Field(..., min_length=3, max_length=500)
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_aliases(cls, data: any):
+        if isinstance(data, dict):
+            if "revision_instruction" in data and "instruction" not in data:
+                data["instruction"] = data["revision_instruction"]
+        return data
 
 
 @router.get("/health", tags=["System"])

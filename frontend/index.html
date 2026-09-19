@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voyager AI — Production Agentic Travel Planner</title>
+    <meta name="description"
+        content="AI-powered travel planning agent with real-time weather adaptation, deterministic budget guardrails, and conversational revisions." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="brand">
+                    <div class="brand-badge">✦</div>
+                    <div>
+                        <h1>VOYAGER <span class="accent-text">AI</span></h1>
+                        <p class="subtitle">Agentic Travel Planner</p>
+                    </div>
+                </div>
+                <div class="system-status">
+                    <span class="status-indicator"></span>
+                    <span class="status-label" id="backendStatus">System Ready</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Search & Input Section -->
+            <section class="planner-card">
+                <div class="card-header">
+                    <h2>Plan Your Next Journey</h2>
+                    <p>Live meteorological forecasts, real-time FX rates, and deterministic budget optimization.</p>
+                </div>
+
+                <form id="planForm" class="plan-form">
+                    <div class="form-row">
+                        <div class="form-group flex-2">
+                            <label for="destination">Destination</label>
+                            <input type="text" id="destination" name="destination"
+                                placeholder="e.g. Paris, Tokyo, Rome, Kyoto" required />
+                        </div>
+
+                        <div class="form-group flex-1">
+                            <label for="duration">Duration (Days)</label>
+                            <input type="number" id="duration" name="duration" min="1" max="14" value="3" required />
+                        </div>
+
+                        <div class="form-group flex-1">
+                            <label for="budget">Total Budget</label>
+                            <div class="input-with-prefix">
+                                <span class="currency-prefix">$</span>
+                                <input type="number" id="budget" name="budget" min="50" max="50000" value="400"
+                                    required />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Travel Style Tags -->
+                    <div class="form-group">
+                        <label>Traveler Preferences</label>
+                        <div class="tag-selector" id="tagSelector">
+                            <button type="button" class="tag-pill active" data-tag="culture">🏛️ Culture & Art</button>
+                            <button type="button" class="tag-pill active" data-tag="foodie">🍷 Food & Dining</button>
+                            <button type="button" class="tag-pill" data-tag="sightseeing">📸 Sightseeing</button>
+                            <button type="button" class="tag-pill" data-tag="budget">💰 Budget Friendly</button>
+                            <button type="button" class="tag-pill" data-tag="nature">🌿 Parks & Nature</button>
+                            <button type="button" class="tag-pill" data-tag="relaxation">☕ Relaxed Pace</button>
+                        </div>
+                    </div>
+
+                    <!-- Custom Notes -->
+                    <div class="form-group">
+                        <label for="notes">Special Interests or Requirements (Optional)</label>
+                        <input type="text" id="notes" name="notes"
+                            placeholder="e.g. Prefer quiet trattorias and morning museums, avoid crowded buses" />
+                    </div>
+
+                    <!-- Actions & Quick Scenarios -->
+                    <div class="form-actions">
+                        <div class="quick-scenarios">
+                            <span class="quick-label">Try scenario:</span>
+                            <button type="button" class="scenario-chip" data-dest="Paris" data-days="3"
+                                data-budget="350">Paris $350 (Budget Test)</button>
+                            <button type="button" class="scenario-chip" data-dest="Tokyo" data-days="4"
+                                data-budget="1200">Tokyo 4-Day</button>
+                            <button type="button" class="scenario-chip" data-dest="Rome" data-days="2"
+                                data-budget="500">Rome 2-Day</button>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="btn btn-primary">
+                            <span class="btn-text">Generate Itinerary</span>
+                            <span class="btn-icon">→</span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Progress Stream Banner -->
+                <div id="progressBanner" class="progress-banner hidden">
+                    <div class="progress-spinner"></div>
+                    <div class="progress-info">
+                        <span class="progress-title" id="progressTitle">Initializing Agent...</span>
+                        <span class="progress-detail" id="progressDetail">Resolving destination coordinates...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Itinerary Presentation View -->
+            <section id="itinerarySection" class="itinerary-section hidden">
+                <!-- Trip Header Banner -->
+                <div class="trip-banner">
+                    <div class="banner-top">
+                        <div>
+                            <div class="trip-badges">
+                                <span class="badge badge-primary" id="tripDaysBadge">3 Days</span>
+                                <span class="badge badge-secondary" id="tripDestBadge">Destination</span>
+                            </div>
+                            <h2 class="trip-title" id="tripDestinationTitle">Paris, France</h2>
+                            <p class="weather-summary-text" id="tripWeatherOverview">Weather overview loading...</p>
+                        </div>
+
+                        <!-- Budget Meter Card -->
+                        <div class="budget-card">
+                            <div class="budget-header">
+                                <span class="budget-label">Total Spend</span>
+                                <span class="budget-values">
+                                    <strong id="totalSpentText">$0</strong> / <span id="budgetLimitText">$0</span>
+                                </span>
+                            </div>
+                            <div class="budget-bar-container">
+                                <div class="budget-bar-fill" id="budgetBarFill"></div>
+                            </div>
+                            <div class="budget-footer">
+                                <span class="budget-status-tag" id="budgetStatusTag">Within Budget</span>
+                                <span class="budget-utilization" id="budgetUtilizationText">0% utilized</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day Navigation Tabs -->
+                <div class="day-tabs-nav" id="dayTabsNav">
+                    <!-- Populated by JavaScript -->
+                </div>
+
+                <!-- Active Day Timeline Content -->
+                <div class="timeline-container" id="timelineContainer">
+                    <!-- Populated by JavaScript -->
+                </div>
+
+                <!-- Financial Breakdown Drawer -->
+                <div class="cost-breakdown-card">
+                    <h3>Itemized Cost Breakdown</h3>
+                    <div class="cost-grid">
+                        <div class="cost-stat">
+                            <span class="cost-stat-label">Attractions & Culture</span>
+                            <span class="cost-stat-value" id="costAttractions">$0</span>
+                        </div>
+                        <div class="cost-stat">
+                            <span class="cost-stat-label">Food & Dining</span>
+                            <span class="cost-stat-value" id="costDining">$0</span>
+                        </div>
+                        <div class="cost-stat">
+                            <span class="cost-stat-label">Local Transit</span>
+                            <span class="cost-stat-value" id="costTransit">$0</span>
+                        </div>
+                        <div class="cost-stat">
+                            <span class="cost-stat-label">Remaining Margin</span>
+                            <span class="cost-stat-value highlight" id="costRemaining">$0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conversational Revision Bar -->
+                <div class="revision-card">
+                    <div class="revision-header">
+                        <h3>Human-in-the-Loop Revision</h3>
+                        <p>Request adjustments in natural language. The agent re-evaluates constraints automatically.
+                        </p>
+                    </div>
+                    <form id="revisionForm" class="revision-form">
+                        <input type="text" id="revisionInput"
+                            placeholder="e.g. Swap Day 2 dinner for an authentic vegan bistro, or make Day 1 afternoon relaxing"
+                            required />
+                        <button type="submit" id="reviseBtn" class="btn btn-secondary">
+                            <span>Update Plan</span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Voyager AI • Built with LangGraph, Pydantic v2, FastAPI & OpenTelemetry/LangSmith</p>
+        </footer>
+    </div>
+
+    <script src="app.js?v=3"></script>
+</body>
+
+</html>
