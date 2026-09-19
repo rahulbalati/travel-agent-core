@@ -58,5 +58,65 @@ async def get_coordinates(destination: str) -> Dict[str, Any]:
     except ValueError:
         raise
     except Exception as exc:
+        logger.warning("Primary Nominatim geocoding failed for '%s' (%s), attempting Wikipedia coordinates fallback...", cleaned_dest, exc)
+        try:
+            wiki_url = "https://en.wikipedia.org/w/api.php"
+            wiki_headers = {"User-Agent": USER_AGENT}
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                # 1. Try exact title with redirects
+                wiki_params = {
+                    "action": "query",
+                    "prop": "coordinates",
+                    "titles": cleaned_dest,
+                    "format": "json",
+                    "redirects": 1,
+                }
+                w_resp = await client.get(wiki_url, params=wiki_params, headers=wiki_headers)
+                if w_resp.status_code == 200:
+                    pages = w_resp.json().get("query", {}).get("pages", {})
+                    for page in pages.values():
+                        if "coordinates" in page and page["coordinates"]:
+                            coord = page["coordinates"][0]
+                            lat = float(coord["lat"])
+                            lon = float(coord["lon"])
+                            display_name = page.get("title", cleaned_dest)
+                            logger.info("Geocoded '%s' via Wikipedia fallback -> lat: %f, lon: %f (%s)", cleaned_dest, lat, lon, display_name)
+                            return {
+                                "destination": cleaned_dest,
+                                "lat": lat,
+                                "lon": lon,
+                                "display_name": display_name,
+                                "country_code": "",
+                            }
+
+                # 2. Try search generator if direct title had no coordinates
+                search_params = {
+                    "action": "query",
+                    "generator": "search",
+                    "gsrsearch": cleaned_dest,
+                    "gsrlimit": 1,
+                    "prop": "coordinates",
+                    "format": "json",
+                }
+                s_resp = await client.get(wiki_url, params=search_params, headers=wiki_headers)
+                if s_resp.status_code == 200:
+                    pages = s_resp.json().get("query", {}).get("pages", {})
+                    for page in pages.values():
+                        if "coordinates" in page and page["coordinates"]:
+                            coord = page["coordinates"][0]
+                            lat = float(coord["lat"])
+                            lon = float(coord["lon"])
+                            display_name = page.get("title", cleaned_dest)
+                            logger.info("Geocoded '%s' via Wikipedia search fallback -> lat: %f, lon: %f (%s)", cleaned_dest, lat, lon, display_name)
+                            return {
+                                "destination": cleaned_dest,
+                                "lat": lat,
+                                "lon": lon,
+                                "display_name": display_name,
+                                "country_code": "",
+                            }
+        except Exception as fb_exc:
+            logger.error("Wikipedia geocoding fallback failed for '%s': %s", cleaned_dest, fb_exc)
+
         logger.error("Geocoding service error for '%s': %s", cleaned_dest, exc)
         raise RuntimeError(f"Geocoding service unavailable for '{cleaned_dest}': {exc}")
