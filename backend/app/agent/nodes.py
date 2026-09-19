@@ -10,6 +10,7 @@ Encapsulates individual state transitions:
 import logging
 from typing import Dict, Any
 
+from langchain_core.runnables import RunnableConfig
 from app.config import get_settings
 from app.schemas.itinerary import Itinerary
 from app.tools.geocoding import get_coordinates
@@ -45,7 +46,7 @@ def _get_model():
         )
 
 
-async def node_gather_tools(state: AgentState) -> Dict[str, Any]:
+async def node_gather_tools(state: AgentState, config: RunnableConfig = None) -> Dict[str, Any]:
     """
     Node 1: Resolves destination coordinates and fetches multi-day forecast concurrently.
     """
@@ -67,10 +68,11 @@ async def node_gather_tools(state: AgentState) -> Dict[str, Any]:
     }
 
 
-async def node_synthesize(state: AgentState) -> Dict[str, Any]:
+async def node_synthesize(state: AgentState, config: RunnableConfig = None) -> Dict[str, Any]:
     """
     Node 2: Prompts the LLM with structured output to synthesize an itinerary.
     Includes guardrail feedback if in a self-correction loop.
+    Passes RunnableConfig to nest LLM generation directly inside this trace node.
     """
     req = state["trip_request"]
     geo = state["geo"]
@@ -112,7 +114,7 @@ async def node_synthesize(state: AgentState) -> Dict[str, Any]:
     else:
         logger.info("Synthesizing initial itinerary draft via LLM...")
 
-    itinerary: Itinerary = await structured_llm.ainvoke(messages)
+    itinerary: Itinerary = await structured_llm.ainvoke(messages, config=config)
 
     # Ensure trip basics are aligned
     itinerary.destination = req.destination
@@ -125,7 +127,7 @@ async def node_synthesize(state: AgentState) -> Dict[str, Any]:
     }
 
 
-async def node_validate_guardrails(state: AgentState) -> Dict[str, Any]:
+async def node_validate_guardrails(state: AgentState, config: RunnableConfig = None) -> Dict[str, Any]:
     """
     Node 3: Deterministic guardrail check for strict budget arithmetic and rain feasibility.
     """
@@ -147,7 +149,7 @@ async def node_validate_guardrails(state: AgentState) -> Dict[str, Any]:
     }
 
 
-async def node_self_correct(state: AgentState) -> Dict[str, Any]:
+async def node_self_correct(state: AgentState, config: RunnableConfig = None) -> Dict[str, Any]:
     """
     Node 4: Prepares state for self-correction by incrementing retry count.
     """

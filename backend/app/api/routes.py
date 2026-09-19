@@ -110,7 +110,12 @@ async def revise_trip(payload: RevisionRequest):
             "Apply the requested modification while ensuring realistic activity pacing and budget compliance."
         )
 
-        revised_itinerary: Itinerary = await structured_llm.ainvoke(prompt)
+        run_config = {
+            "run_name": f"Trip Revision: {payload.current_itinerary.destination}",
+            "tags": ["travel-agent", "revision"],
+            "metadata": {"destination": payload.current_itinerary.destination},
+        }
+        revised_itinerary: Itinerary = await structured_llm.ainvoke(prompt, config=run_config)
         verify_guardrails(
             itinerary=revised_itinerary,
             budget=payload.current_itinerary.budget,

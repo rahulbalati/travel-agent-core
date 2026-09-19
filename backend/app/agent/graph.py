@@ -82,7 +82,17 @@ async def plan_trip(request: TripRequest) -> Dict[str, Any]:
         "trip_request": request,
         "retry_count": 0,
     }
-    return await graph.ainvoke(initial_state)
+    run_config = {
+        "run_name": f"Trip Planner: {request.destination}",
+        "tags": ["travel-agent", f"{request.duration_days}-days"],
+        "metadata": {
+            "destination": request.destination,
+            "duration_days": request.duration_days,
+            "budget": request.budget,
+            "currency": request.currency,
+        },
+    }
+    return await graph.ainvoke(initial_state, config=run_config)
 
 
 async def astream_trip(request: TripRequest) -> AsyncGenerator[str, None]:
@@ -93,9 +103,19 @@ async def astream_trip(request: TripRequest) -> AsyncGenerator[str, None]:
         "trip_request": request,
         "retry_count": 0,
     }
+    run_config = {
+        "run_name": f"Trip Planner: {request.destination}",
+        "tags": ["travel-agent", f"{request.duration_days}-days"],
+        "metadata": {
+            "destination": request.destination,
+            "duration_days": request.duration_days,
+            "budget": request.budget,
+            "currency": request.currency,
+        },
+    }
 
     try:
-        async for event in graph.astream(initial_state, stream_mode="updates"):
+        async for event in graph.astream(initial_state, config=run_config, stream_mode="updates"):
             for node_name, state_update in event.items():
                 status = state_update.get("status", f"Executed {node_name}")
                 payload = {
