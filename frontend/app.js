@@ -4,7 +4,12 @@
  * and conversational human-in-the-loop revisions.
  */
 
-const API_BASE = "http://localhost:8000/api";
+// Automatically adapt API_BASE to localhost:8000 when served from :5000, or relative in production
+const API_BASE = window.VOYAGER_API_BASE || (
+    window.location.port === "5000"
+        ? "http://localhost:8000/api"
+        : `${window.location.origin}/api`
+);
 
 // Active session state
 let currentItinerary = null;

@@ -3,10 +3,19 @@ Voyager AI - Application Entrypoint.
 Configures FastAPI application, CORS middleware, and API routes.
 """
 
+import sys
 import logging
+from pathlib import Path
 from contextlib import asynccontextmanager
+
+# Ensure backend directory is on sys.path regardless of execution root
+backend_dir = str(Path(__file__).resolve().parent)
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from dotenv import load_dotenv
 
@@ -49,6 +58,12 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router, prefix=settings.api_prefix)
+
+    # Mount frontend static assets for unified single-service cloud deployment
+    frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
+    if frontend_dir.exists():
+        app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
+
     return app
 
 
